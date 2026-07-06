@@ -1,0 +1,6 @@
+# Shell scripts and Python run in Linux CI: force LF so CRLF never breaks them.
+*.sh text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
+# DuckDB database is binary; never touch line endings.
+*.duckdb binary

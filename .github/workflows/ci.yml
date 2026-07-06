@@ -1,0 +1,50 @@
+name: dbt Slim CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Least-privilege: read the code, write PR comments.
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # On a pull request: build ONLY the changed models and their descendants,
+  # comment the result, and block the merge on any failure. This is the kit.
+  slim-ci:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run dbt Slim CI
+        uses: ./
+        with:
+          project-dir: example
+          profiles-dir: .
+          state-dir: ci-state
+          target: ci
+          dbt-adapter: dbt-duckdb==1.10.1
+          teardown-command: python "$GITHUB_WORKSPACE/scripts/teardown_duckdb.py" ci.duckdb main_ci
+        env:
+          DBT_CI_PATH: ci.duckdb
+          DBT_CI_SCHEMA: main_ci
+          DBT_PROD_PATH: ci-state/prod.duckdb
+
+  # On push to main: build the WHOLE project so the default branch badge proves
+  # every model and test is green, not just the last PR's slice.
+  full-build:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install dbt
+        run: python -m pip install --upgrade pip dbt-duckdb==1.10.1
+      - name: Full dbt build
+        working-directory: example
+        run: dbt build --target prod --profiles-dir . --no-partial-parse

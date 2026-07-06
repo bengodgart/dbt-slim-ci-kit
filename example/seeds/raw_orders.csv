@@ -1,0 +1,11 @@
+id,customer_id,order_date,status,amount_cents
+101,1,2024-03-01,completed,4200
+102,1,2024-04-15,completed,1599
+103,2,2024-03-08,returned,2500
+104,3,2024-03-22,completed,8800
+105,3,2024-05-02,shipped,3300
+106,4,2024-04-01,completed,1250
+107,5,2024-04-19,completed,6700
+108,6,2024-05-10,placed,4900
+109,7,2024-05-14,completed,2100
+110,7,2024-06-01,shipped,540

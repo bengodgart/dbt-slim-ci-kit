@@ -1,0 +1,109 @@
+name: "dbt Slim CI"
+description: "Build and test only the dbt models changed in a pull request and their descendants, then comment the result on the PR. Free dbt Cloud Slim CI for dbt Core."
+branding:
+  icon: "git-pull-request"
+  color: "purple"
+
+inputs:
+  python-version:
+    description: "Python version to run dbt with."
+    required: false
+    default: "3.13"
+  dbt-adapter:
+    description: "The dbt adapter package to pip install (for example dbt-duckdb, dbt-bigquery, dbt-snowflake). Pin a version if you want reproducible runs."
+    required: false
+    default: "dbt-duckdb"
+  project-dir:
+    description: "Path to the dbt project (the folder holding dbt_project.yml), relative to the repo root."
+    required: false
+    default: "."
+  profiles-dir:
+    description: "Path to the folder holding profiles.yml, relative to project-dir."
+    required: false
+    default: "."
+  state-dir:
+    description: "Folder holding the committed prod manifest.json to defer against, relative to project-dir."
+    required: false
+    default: "ci-state"
+  target:
+    description: "The profiles.yml target to run (should point at a staging schema)."
+    required: false
+    default: "ci"
+  select:
+    description: "dbt selection expression. The default is the Slim CI standard."
+    required: false
+    default: "state:modified+"
+  teardown-command:
+    description: "Optional shell command run in project-dir after the build to drop the staging schema. Empty by default."
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install dbt
+      shell: bash
+      run: python -m pip install --upgrade pip "${{ inputs.dbt-adapter }}"
+
+    - name: Slim CI build
+      id: build
+      shell: bash
+      continue-on-error: true
+      env:
+        SLIM_CI_SELECT: ${{ inputs.select }}
+      run: |
+        bash "${{ github.action_path }}/scripts/slim_ci.sh" \
+          "${{ inputs.project-dir }}" \
+          "${{ inputs.state-dir }}" \
+          "${{ inputs.target }}" \
+          "${{ inputs.profiles-dir }}"
+
+    - name: Format PR comment
+      id: comment
+      shell: bash
+      run: |
+        RR="${{ inputs.project-dir }}/target/run_results.json"
+        MF="${{ inputs.project-dir }}/target/manifest.json"
+        python "${{ github.action_path }}/scripts/format_comment.py" "$RR" \
+          --manifest "$MF" --select "${{ inputs.select }}" > "$RUNNER_TEMP/slim_ci_comment.md" || true
+        echo "path=$RUNNER_TEMP/slim_ci_comment.md" >> "$GITHUB_OUTPUT"
+
+    - name: Post comment on the pull request
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = process.env.COMMENT_PATH;
+          let body = 'dbt Slim CI produced no comment.';
+          try { body = fs.readFileSync(path, 'utf8'); } catch (e) {}
+          const marker = 'Posted by dbt-slim-ci-kit';
+          const { owner, repo } = context.repo;
+          const issue_number = context.issue.number;
+          const existing = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+          const mine = existing.find(c => c.body && c.body.includes(marker));
+          if (mine) {
+            await github.rest.issues.updateComment({ owner, repo, comment_id: mine.id, body });
+          } else {
+            await github.rest.issues.createComment({ owner, repo, issue_number, body });
+          }
+      env:
+        COMMENT_PATH: ${{ steps.comment.outputs.path }}
+
+    - name: Tear down the staging schema
+      if: ${{ always() && inputs.teardown-command != '' }}
+      shell: bash
+      working-directory: ${{ inputs.project-dir }}
+      run: ${{ inputs.teardown-command }}
+
+    - name: Fail the job if the build failed
+      if: ${{ steps.build.outcome == 'failure' }}
+      shell: bash
+      run: |
+        echo "dbt Slim CI found model or test failures. Blocking the merge."
+        exit 1

@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: customers
+    description: "One row per customer with order rollups."
+    columns:
+      - name: customer_id
+        data_tests:
+          - not_null
+          - unique
+      - name: lifetime_amount_usd
+        data_tests:
+          - not_null
+
+  - name: orders
+    description: "One row per order with a returned flag."
+    columns:
+      - name: order_id
+        data_tests:
+          - not_null
+          - unique
+      - name: amount_usd
+        data_tests:
+          - not_null
+
+  - name: order_stats
+    description: "Order counts and revenue grouped by status."
+    columns:
+      - name: status
+        data_tests:
+          - not_null
+          - unique

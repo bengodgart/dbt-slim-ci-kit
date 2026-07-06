@@ -1,0 +1,24 @@
+# dbt build artifacts
+example/target/
+example/logs/
+example/dbt_packages/
+logs/
+.user.yml
+example/.user.yml
+
+# Local DuckDB databases are ephemeral. Keep only the committed prod state
+# that CI defers to.
+*.duckdb
+!example/ci-state/prod.duckdb
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# GTM assets kept out of the public repo (portfolio go-to-market only)
+PRD.md
+parking_lot.md
+posts/
+publish-guide.html

@@ -1,0 +1,38 @@
+# Profiles for the example project.
+#
+# Three targets, all DuckDB so the demo is self-contained (no warehouse, no
+# secrets). To adopt this kit on a real warehouse, replace the whole block
+# with your BigQuery / Snowflake / Postgres outputs and keep the target names
+# (dev / prod / ci). See the README section "Swap in a real warehouse".
+example_shop:
+  target: dev
+  outputs:
+    # Local development database.
+    dev:
+      type: duckdb
+      path: "dev.duckdb"
+      schema: main
+      threads: 4
+
+    # Production. On a real warehouse this is your live prod schema; here it is
+    # a committed DuckDB file that the CI job defers to for unchanged models.
+    prod:
+      type: duckdb
+      path: "{{ env_var('DBT_PROD_PATH', 'ci-state/prod.duckdb') }}"
+      schema: main
+      threads: 4
+
+    # CI. Builds only the changed models and their descendants into a separate
+    # staging schema, deferring everything else to prod. The committed prod
+    # database is attached read-only as the catalog named "prod" so deferred
+    # refs (recorded in the prod manifest as prod.main.<model>) resolve. On a
+    # real warehouse you drop the attach block and point prod at the live schema.
+    ci:
+      type: duckdb
+      path: "{{ env_var('DBT_CI_PATH', 'ci.duckdb') }}"
+      schema: "{{ env_var('DBT_CI_SCHEMA', 'main_ci') }}"
+      threads: 4
+      attach:
+        - path: "{{ env_var('DBT_PROD_PATH', 'ci-state/prod.duckdb') }}"
+          alias: prod
+          read_only: true
