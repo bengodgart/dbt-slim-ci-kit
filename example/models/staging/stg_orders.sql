@@ -6,7 +6,7 @@ select
     id as order_id,
     customer_id,
     order_date,
-    status,
+    upper(status) as status,
     amount_cents,
     amount_cents / 100.0 as amount_usd
 from source
