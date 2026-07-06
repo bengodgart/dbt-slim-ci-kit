@@ -8,5 +8,6 @@ select
     order_date,
     status,
     amount_cents,
-    amount_cents / 100.0 as amount_usd
+    amount_cents / 100.0 as amount_usd,
+    upper(status) as status_display
 from source
