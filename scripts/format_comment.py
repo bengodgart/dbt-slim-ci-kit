@@ -15,6 +15,7 @@ import sys
 
 PASS_STATES = {"success", "pass"}
 FAIL_STATES = {"error", "fail", "runtime error"}
+WARN_STATES = {"warn"}
 SKIP_STATE = "skipped"
 
 
@@ -56,6 +57,8 @@ def verdict_icon(status):
         return "PASS"
     if s in FAIL_STATES:
         return "FAIL"
+    if s in WARN_STATES:
+        return "WARN"
     if s == SKIP_STATE:
         return "SKIP"
     return status.upper()
@@ -65,7 +68,7 @@ def build_comment(data, select_expr, name_map=None):
     results = data.get("results", [])
     elapsed = data.get("elapsed_time", 0.0)
 
-    models_built = tests_passed = tests_failed = models_failed = skipped = 0
+    models_built = tests_passed = tests_failed = tests_warned = models_failed = skipped = 0
     rows = []
     for r in results:
         uid = r.get("unique_id", "")
@@ -79,27 +82,43 @@ def build_comment(data, select_expr, name_map=None):
         if kind == "test":
             if status in PASS_STATES:
                 tests_passed += 1
+            elif status in WARN_STATES:
+                # A warn-severity test does not fail the build, so it must not
+                # read as a failure or flip the overall verdict.
+                tests_warned += 1
             else:
                 tests_failed += 1
-        elif kind in ("model", "seed", "snapshot"):
+        elif kind == "model":
             if status in PASS_STATES:
                 models_built += 1
             else:
                 models_failed += 1
+        # seeds and snapshots still get a table row via rows.append below but
+        # are not counted as models, so "Built N models" stays accurate.
         rows.append((verdict_icon(status), kind, short_name(uid, name_map), exec_time))
 
     failed = models_failed + tests_failed
     overall = "FAILURE" if failed else "SUCCESS"
+
+    warn_clause = ", {} warned".format(tests_warned) if tests_warned else ""
 
     lines = []
     lines.append("## dbt Slim CI: {}".format(overall))
     lines.append("")
     lines.append(
         "Built **{}** models, ran **{}** tests "
-        "({} passed, {} failed) in **{:.1f}s**.".format(
-            models_built, tests_passed + tests_failed, tests_passed, tests_failed, elapsed
+        "({} passed, {} failed{}) in **{:.1f}s**.".format(
+            models_built,
+            tests_passed + tests_failed + tests_warned,
+            tests_passed,
+            tests_failed,
+            warn_clause,
+            elapsed
         )
     )
+    if models_failed:
+        lines.append("")
+        lines.append("**{}** model(s) failed to build.".format(models_failed))
     lines.append("")
     lines.append(
         "Selection: `{}`. Only models changed in this pull request and their "

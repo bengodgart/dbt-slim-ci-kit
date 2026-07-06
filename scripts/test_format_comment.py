@@ -56,6 +56,31 @@ def main():
     first_row = failing[table_start:].splitlines()[1]
     check(first_row.startswith("| FAIL "), "failing run sorts the failure to the top")
 
+    # --- a warn-severity test must not read as a failure or flip the verdict ---
+    warn_data = {
+        "elapsed_time": 0.2,
+        "results": [
+            {"unique_id": "model.p.stg_orders", "status": "success", "execution_time": 0.05},
+            {"unique_id": "test.p.warn_one", "status": "warn", "execution_time": 0.01},
+            {"unique_id": "test.p.pass_one", "status": "pass", "execution_time": 0.01},
+        ],
+    }
+    warned = fc.build_comment(warn_data, "state:modified+")
+    check("dbt Slim CI: SUCCESS" in warned, "a warn test keeps the overall verdict SUCCESS")
+    check("1 warned" in warned, "a warn test is reported as warned, not failed")
+    check("| WARN | test |" in warned, "a warn test shows a WARN row")
+
+    # --- a model that fails to build is surfaced in the counts, not just the table ---
+    modelfail = {
+        "elapsed_time": 0.2,
+        "results": [
+            {"unique_id": "model.p.orders", "status": "error", "execution_time": 0.02},
+        ],
+    }
+    mf = fc.build_comment(modelfail, "state:modified+")
+    check("dbt Slim CI: FAILURE" in mf, "a model build error reports FAILURE")
+    check("model(s) failed to build" in mf, "a model build error is stated in the summary")
+
     # --- missing artifact path is handled, not crashed ---
     import io
     import contextlib

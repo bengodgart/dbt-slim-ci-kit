@@ -84,6 +84,8 @@ That is the whole adoption path: one `uses:` line, one committed manifest, one s
 - **Teardown** drops the staging schema after the run, so CI leaves nothing behind.
 - **The exit code gates the merge.** Any failed model or test makes the job exit non-zero, which fails the required check.
 
+Note on forks: a pull request opened from a fork gets a read-only token, so the comment cannot be posted. The kit does not treat that as a failure, so the build check still runs and gates the merge; only the comment is skipped on fork PRs.
+
 ## The demo warehouse: DuckDB
 
 So the demo is self-contained, costs nothing, and never sleeps, this repo targets DuckDB running inside the Actions runner. Because DuckDB is a single file rather than an always-on warehouse, the repo commits a tiny prod database (`example/ci-state/prod.duckdb`) that stands in for your live prod, and the CI job attaches it read-only as the catalog Slim CI defers to. The Slim CI step still builds only the changed models. Nothing else about the technique changes.

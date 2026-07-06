@@ -75,6 +75,10 @@ runs:
 
     - name: Post comment on the pull request
       if: github.event_name == 'pull_request'
+      # Pull requests from forks get a read-only token, so this step 403s and
+      # cannot post. Do not let that hard-fail the job: the build outcome, not
+      # the comment, is what gates the merge.
+      continue-on-error: true
       uses: actions/github-script@v7
       with:
         script: |
