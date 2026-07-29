@@ -7,10 +7,10 @@ framework: dbt
 database: 'DuckDB in the example. Swap the adapter for a real warehouse.'
 ci: 'GitHub Actions, via action.yml'
 build: 'dbt build with state:modified+ and --defer'
-tests: 'python scripts/test_format_comment.py, 14 checks'
+tests: 'python scripts/test_format_comment.py, 19 checks'
 generated:
   by: claude-opus-5
-  at: '2026-07-29T06:00:00+00:00'
+  at: '2026-07-29T04:24:12+00:00'
 status: stable
 ---
 
@@ -26,7 +26,7 @@ status: stable
   request and their descendants are built. Everything unchanged is deferred to prod.
 * **Scripts**: `scripts/` holds the run-results formatter that writes the PR comment.
 * **Example**: `example/` is a complete small dbt project the kit runs against itself.
-* **Tests**: `python scripts/test_format_comment.py`, 14 checks against committed
+* **Tests**: `python scripts/test_format_comment.py`, 19 checks against committed
   `run_results.json` fixtures, no warehouse needed.
 
 ## What is deliberately not here

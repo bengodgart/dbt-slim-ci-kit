@@ -4,7 +4,7 @@ title: Run dbt-slim-ci-kit locally
 description: 'How to stand up the example project and run the Slim CI build the action runs.'
 generated:
   by: claude-opus-5
-  at: '2026-07-29T06:00:00+00:00'
+  at: '2026-07-29T04:24:12+00:00'
 status: stable
 ---
 
@@ -28,7 +28,7 @@ DBT_CI_PATH=ci.duckdb DBT_CI_SCHEMA=main_ci \
 ## Available scripts
 
 * `python scripts/test_format_comment.py` runs the PR-comment formatter smoke test against
-  committed fixtures, no warehouse needed. Expected: `RESULT: all 14 passed`.
+  committed fixtures, no warehouse needed. Expected: `RESULT: all 19 passed`.
 
 ## Adopting it in another repo
 
